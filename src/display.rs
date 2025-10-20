@@ -1,17 +1,190 @@
-use crate::board::Board;
+use crate::bag::Bag;
+use crate::board::{Board, CellKind, BOARD_SIZE};
+use crate::player::Rack;
+use std::collections::BTreeMap;
 use std::fmt;
 
+const CELL_W: usize = 4;
+
+fn center(s: &str, w: usize) -> String {
+    let s = if s.chars().count() > w {
+        s.chars().take(w).collect::<String>()
+    } else {
+        s.to_string()
+    };
+    let len = s.chars().count();
+    let left = (w - len) / 2;
+    let right = w - len - left;
+    format!("{}{}{}", " ".repeat(left), s, " ".repeat(right))
+}
+
+fn col_labels() -> [char; BOARD_SIZE] {
+    let mut labels = [' '; BOARD_SIZE];
+    for i in 0..BOARD_SIZE {
+        labels[i] = (b'A' + i as u8) as char;
+    }
+    labels
+}
+
 impl fmt::Display for Board {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        for row in &self.cells {
-            for cell in row {
-                match cell {
-                    Some(c) => write!(f, "{}  ", c)?,
-                    None => write!(f, ".  ")?,
-                }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let cols = col_labels();
+        write!(f, "     ")?;
+        for &c in &cols {
+            write!(f, "{}", center(&c.to_string(), CELL_W + 1))?;
+        }
+        writeln!(f)?;
+
+        write!(f, "    ")?;
+        write!(f, "┌")?;
+        for x in 0..BOARD_SIZE {
+            write!(f, "{}", "─".repeat(CELL_W))?;
+            write!(f, "{}", if x + 1 == BOARD_SIZE { "┐" } else { "┬" })?;
+        }
+        writeln!(f)?;
+
+        for r in 0..BOARD_SIZE {
+            write!(f, "{:>3} ", r + 1)?;
+
+            write!(f, "│")?;
+            for c in 0..BOARD_SIZE {
+                let cell = &self.cells[r][c];
+                let label = match cell.letter {
+                    Some(ch) => ch.to_ascii_uppercase().to_string(),
+                    None => {
+                        if r == 7 && c == 7 {
+                            "★".to_string()
+                        } else {
+                            match cell.kind {
+                                CellKind::Normal => "·".to_string(),
+                                CellKind::DoubleLetter => "LD".to_string(),
+                                CellKind::TripleLetter => "LT".to_string(),
+                                CellKind::DoubleWord => "MD".to_string(),
+                                CellKind::TripleWord => "MT".to_string(),
+                            }
+                        }
+                    }
+                };
+                write!(f, "{}", center(&label, CELL_W))?;
+                write!(f, "│")?;
             }
             writeln!(f)?;
+
+            write!(f, "    ")?;
+            if r + 1 == BOARD_SIZE {
+                write!(f, "└")?;
+                for x in 0..BOARD_SIZE {
+                    write!(f, "{}", "─".repeat(CELL_W))?;
+                    write!(f, "{}", if x + 1 == BOARD_SIZE { "┘" } else { "┴" })?;
+                }
+                writeln!(f)?;
+            } else {
+                write!(f, "├")?;
+                for x in 0..BOARD_SIZE {
+                    write!(f, "{}", "─".repeat(CELL_W))?;
+                    write!(f, "{}", if x + 1 == BOARD_SIZE { "┤" } else { "┼" })?;
+                }
+                writeln!(f)?;
+            }
         }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for Bag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut counts: BTreeMap<char, (u8, u32)> = BTreeMap::new();
+
+        for tile in &self.tiles {
+            let entry = counts.entry(tile.letter).or_insert((tile.value, 0));
+            entry.1 += 1;
+        }
+
+        writeln!(f, "--- Bag contents ---")?;
+        writeln!(f, "{:<3} | {:<5} | {:<5}", "Let", "Val", "Count")?;
+        writeln!(f, "--------------------")?;
+
+        for (letter, (value, count)) in counts {
+            writeln!(f, "{:<3} | {:<5} | {:<5}", letter, value, count)?;
+        }
+
+        writeln!(f, "Total tiles: {}", self.tiles.len())
+    }
+}
+
+fn superscript_num(n: u8) -> String {
+    const SUP: [char; 10] = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
+    if n == 0 {
+        return SUP[0].to_string();
+    }
+    let mut digits = Vec::new();
+    let mut x = n as usize;
+    while x > 0 {
+        digits.push(SUP[x % 10]);
+        x /= 10;
+    }
+    digits.reverse();
+    digits.iter().collect()
+}
+
+impl fmt::Display for Rack {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Lettres:")?;
+        if self.tiles.is_empty() {
+            return writeln!(f, "(empty rack)");
+        }
+
+        let ascii_fallback = f.alternate();
+        let cell_w = 6;
+        let tile_count = self.tiles.len();
+
+        write!(f, "┌")?;
+        for i in 0..tile_count {
+            write!(f, "{}", "─".repeat(cell_w))?;
+            write!(f, "{}", if i + 1 == tile_count { "┐" } else { "┬" })?;
+        }
+        writeln!(f)?;
+
+        write!(f, "│")?;
+        for (_, tile) in self.tiles.iter().enumerate() {
+            let ch = if tile.value == 0 {
+                '_'
+            } else {
+                tile.letter.to_ascii_uppercase()
+            };
+
+            let score = if tile.value == 0 {
+                String::new()
+            } else if ascii_fallback {
+                format!("^{}", tile.value)
+            } else {
+                superscript_num(tile.value)
+            };
+
+            let label = format!("{}{}", ch, score);
+            let pad_total = cell_w - label.chars().count();
+            let left_pad = pad_total / 2;
+            let right_pad = pad_total - left_pad;
+            write!(
+                f,
+                "{}{}{}",
+                " ".repeat(left_pad),
+                label,
+                " ".repeat(right_pad)
+            )?;
+
+            write!(f, "│")?;
+        }
+        writeln!(f)?;
+
+        write!(f, "└")?;
+        for i in 0..tile_count {
+            write!(f, "{}", "─".repeat(cell_w))?;
+            write!(f, "{}", if i + 1 == tile_count { "┘" } else { "┴" })?;
+        }
+        writeln!(f)?;
+
         Ok(())
     }
 }
