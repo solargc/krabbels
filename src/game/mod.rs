@@ -1,7 +1,12 @@
-use crate::action::Action;
-use crate::bag::Bag;
-use crate::board::Board;
-use crate::player::Player;
+pub mod action;
+pub mod bag;
+pub mod board;
+pub mod player;
+
+use self::action::Action;
+use self::bag::Bag;
+use self::board::Board;
+use self::player::{Player, Rack};
 
 enum Move {
     PlaceWord,
@@ -61,7 +66,23 @@ impl Game {
     }
 
     pub fn apply(&mut self, action: Action) -> Result<Vec<GameEvent>, MoveError> {
-        let events = Vec::new();
+        let mut events = Vec::new();
+
+        match action {
+            Action::PlaceWord { row, col, dir } => {
+                let count = self
+                    .board
+                    .place_rack_all(&mut self.players[0].rack, row, col, &dir);
+
+                if count == 0 {
+                    return Err(MoveError::OutOfBounds);
+                }
+
+                //events.push(GameEvent::WordPlaced { count });
+            }
+            _ => {}
+        }
+
         Ok(events)
     }
 

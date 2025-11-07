@@ -1,4 +1,4 @@
-use crate::bag::{Bag, Tile};
+use super::bag::{Bag, Tile};
 
 pub struct Player {
     pub id: usize,

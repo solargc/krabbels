@@ -1,5 +1,5 @@
-use crate::action::Action::PlaceWord;
-use crate::board::Direction;
+use crate::game::action::Action::PlaceWord;
+use crate::game::board::Direction;
 use crate::game::Game;
 
 pub fn run() {
@@ -12,7 +12,6 @@ pub fn run() {
         row: 7,
         col: 7,
         dir: Direction::Across,
-        word: "HELLO".into(),
     };
 
     match game.apply(action) {
@@ -26,6 +25,9 @@ pub fn run() {
             eprintln!("Invalid move");
         }
     }
+
+    println!("{}", game.board);
+    println!("{}", game.players[0].rack);
 
     // let snapshot = game.view();
     // draw_board(&snapshot.board);

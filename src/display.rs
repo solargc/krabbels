@@ -1,6 +1,6 @@
-use crate::bag::Bag;
-use crate::board::{Board, CellKind, BOARD_SIZE};
-use crate::player::Rack;
+use crate::game::bag::Bag;
+use crate::game::board::{Board, CellKind, BOARD_SIZE};
+use crate::game::player::Rack;
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -56,7 +56,7 @@ impl fmt::Display for Board {
                             "★".to_string()
                         } else {
                             match cell.kind {
-                                CellKind::Normal => "·".to_string(),
+                                CellKind::Normal => " ".to_string(),
                                 CellKind::DoubleLetter => "LD".to_string(),
                                 CellKind::TripleLetter => "LT".to_string(),
                                 CellKind::DoubleWord => "MD".to_string(),

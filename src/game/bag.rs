@@ -1,7 +1,7 @@
 use rand::prelude::*;
 
 pub const DISTRIBUTION: [(char, u8, u8); 27] = [
-    ('*', 2, 0),
+    ('_', 2, 0),
     ('A', 9, 1),
     ('B', 2, 3),
     ('C', 2, 3),
@@ -33,6 +33,7 @@ pub const DISTRIBUTION: [(char, u8, u8); 27] = [
 pub struct Tile {
     pub letter: char,
     pub value: u8,
+    pub is_blank: bool,
 }
 
 pub struct Bag {
@@ -45,12 +46,15 @@ impl Bag {
 
         for &(ch, count, val) in DISTRIBUTION.iter() {
             for _ in 0..count {
+                let is_blank = val == 0;
                 tiles.push(Tile {
                     letter: ch,
                     value: val,
+                    is_blank,
                 });
             }
         }
+
         Self { tiles }
     }
 
