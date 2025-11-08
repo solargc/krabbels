@@ -1,21 +1,33 @@
 use crate::game::bag::Bag;
 use crate::game::board::{Board, CellKind, BOARD_SIZE};
 use crate::game::player::Rack;
+use colored::*;
 use std::collections::BTreeMap;
 use std::fmt;
 
 const CELL_W: usize = 4;
 
-fn center(s: &str, w: usize) -> String {
-    let s = if s.chars().count() > w {
-        s.chars().take(w).collect::<String>()
-    } else {
-        s.to_string()
-    };
-    let len = s.chars().count();
-    let left = (w - len) / 2;
-    let right = w - len - left;
-    format!("{}{}{}", " ".repeat(left), s, " ".repeat(right))
+fn center(text: &str, width: usize) -> String {
+    let visual_len = strip_ansi_len(text);
+    let padding = width.saturating_sub(visual_len);
+    let left_pad = padding / 2;
+    let right_pad = padding - left_pad;
+    format!("{}{}{}", " ".repeat(left_pad), text, " ".repeat(right_pad))
+}
+
+fn strip_ansi_len(text: &str) -> usize {
+    let mut len = 0;
+    let mut in_escape = false;
+    for ch in text.chars() {
+        if ch == '\x1b' {
+            in_escape = true;
+        } else if in_escape && ch == 'm' {
+            in_escape = false;
+        } else if !in_escape {
+            len += 1;
+        }
+    }
+    len
 }
 
 fn col_labels() -> [char; BOARD_SIZE] {
@@ -50,17 +62,17 @@ impl fmt::Display for Board {
             for c in 0..BOARD_SIZE {
                 let cell = &self.cells[r][c];
                 let label = match cell.letter {
-                    Some(ch) => ch.to_ascii_uppercase().to_string(),
+                    Some(ch) => ch.to_ascii_uppercase().to_string().bold().to_string(),
                     None => {
                         if r == 7 && c == 7 {
                             "★".to_string()
                         } else {
                             match cell.kind {
                                 CellKind::Normal => " ".to_string(),
-                                CellKind::DoubleLetter => "LD".to_string(),
-                                CellKind::TripleLetter => "LT".to_string(),
-                                CellKind::DoubleWord => "MD".to_string(),
-                                CellKind::TripleWord => "MT".to_string(),
+                                CellKind::DoubleLetter => "LD".blue().to_string(),
+                                CellKind::TripleLetter => "LT".cyan().to_string(),
+                                CellKind::DoubleWord => "MD".red().to_string(),
+                                CellKind::TripleWord => "MT".magenta().to_string(),
                             }
                         }
                     }

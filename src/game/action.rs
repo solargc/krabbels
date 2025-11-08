@@ -2,8 +2,7 @@ use super::board;
 
 pub enum Action {
     PlaceWord {
-        row: usize,
-        col: usize,
+        start_pos: board::Position,
         dir: board::Direction,
     },
     ShuffleRack,

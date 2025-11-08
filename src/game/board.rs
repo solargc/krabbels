@@ -2,6 +2,7 @@ use super::player::Rack;
 
 pub const BOARD_SIZE: usize = 15;
 
+#[derive(Copy, Clone)]
 pub struct Position {
     pub row: usize,
     pub col: usize,
@@ -129,59 +130,43 @@ impl Board {
         row < BOARD_SIZE && col < BOARD_SIZE
     }
 
-    fn step_towards_dir(
-        start_row: usize,
-        start_col: usize,
-        dir: &Direction,
-        i: usize,
-    ) -> (usize, usize) {
+    fn step_towards_dir(pos: &Position, dir: &Direction, i: usize) -> (usize, usize) {
         match dir {
-            Direction::Across => (start_row, start_col + i),
-            Direction::Down => (start_row + i, start_col),
+            Direction::Across => (pos.row, pos.col + i),
+            Direction::Down => (pos.row + i, pos.col),
         }
     }
 
-    pub fn place_from_rack(
+    pub fn try_place_tiles(
         &mut self,
         rack: &mut Rack,
-        row: usize,
-        col: usize,
+        pos: &Position,
         dir: &Direction,
         n: usize,
     ) -> usize {
         let limit = n.min(rack.len());
-        let mut span = 0usize;
+        let mut tiles_placed = 0usize;
 
         for i in 0..limit {
-            let (row, col) = Self::step_towards_dir(row, col, &dir, i);
+            let (row, col) = Self::step_towards_dir(pos, dir, i);
             if !self.in_bounds(row, col) {
                 break;
             }
             if self.cells[row][col].letter.is_some() {
                 break;
             }
-            span += 1;
+            tiles_placed += 1;
         }
 
-        if span == 0 {
+        if tiles_placed == 0 {
             return 0;
         }
 
-        for (i, tile) in rack.tiles.drain(0..span).enumerate() {
-            let (row, col) = Self::step_towards_dir(row, col, dir, i);
+        for (i, tile) in rack.tiles.drain(0..tiles_placed).enumerate() {
+            let (row, col) = Self::step_towards_dir(pos, dir, i);
             self.cells[row][col].letter = Some(tile.letter);
         }
 
-        span
-    }
-
-    pub fn place_rack_all(
-        &mut self,
-        rack: &mut Rack,
-        row: usize,
-        col: usize,
-        dir: &Direction,
-    ) -> usize {
-        self.place_from_rack(rack, row, col, dir, rack.tiles.len())
+        tiles_placed
     }
 }

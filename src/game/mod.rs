@@ -69,10 +69,10 @@ impl Game {
         let mut events = Vec::new();
 
         match action {
-            Action::PlaceWord { row, col, dir } => {
-                let count = self
-                    .board
-                    .place_rack_all(&mut self.players[0].rack, row, col, &dir);
+            Action::PlaceWord { start_pos, dir } => {
+                let count =
+                    self.board
+                        .try_place_tiles(&mut self.players[0].rack, &start_pos, &dir, 7);
 
                 if count == 0 {
                     return Err(MoveError::OutOfBounds);

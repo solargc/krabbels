@@ -1,5 +1,5 @@
 use crate::game::action::Action::PlaceWord;
-use crate::game::board::Direction;
+use crate::game::board::{Direction, Position};
 use crate::game::Game;
 
 pub fn run() {
@@ -9,8 +9,7 @@ pub fn run() {
     println!("{}", game.players[0].rack);
 
     let action = PlaceWord {
-        row: 7,
-        col: 7,
+        start_pos: Position { row: 7, col: 7 },
         dir: Direction::Across,
     };
 
