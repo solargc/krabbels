@@ -142,7 +142,7 @@ fn superscript_num(n: u8) -> String {
 
 impl fmt::Display for Rack {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Lettres:")?;
+        writeln!(f, "Chevalet:")?;
         if self.tiles.is_empty() {
             return writeln!(f, "(empty rack)");
         }
