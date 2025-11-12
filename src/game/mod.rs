@@ -6,7 +6,7 @@ pub mod player;
 use self::action::Action;
 use self::bag::Bag;
 use self::board::Board;
-use self::player::{Player, Rack};
+use self::player::Player;
 
 enum Move {
     PlaceWord,
@@ -69,10 +69,18 @@ impl Game {
         let mut events = Vec::new();
 
         match action {
-            Action::PlaceWord { start_pos, dir } => {
-                let count =
-                    self.board
-                        .try_place_tiles(&mut self.players[0].rack, &start_pos, &dir, 7);
+            Action::PlaceWord {
+                start_pos,
+                direction,
+                word,
+            } => {
+                let count = self.board.try_place_tiles(
+                    &mut self.players[0].rack,
+                    &word,
+                    &start_pos,
+                    &direction,
+                    7,
+                );
 
                 if count == 0 {
                     return Err(MoveError::OutOfBounds);
@@ -88,9 +96,9 @@ impl Game {
 
     pub fn add_player(&mut self, name: String) {
         let id = self.players.len() + 1;
-        let mut p = Player::new(id, name);
-        p.rack.top_up_from(&mut self.bag);
-        self.players.push(p);
+        let mut player = Player::new(id, name);
+        player.rack.top_up_from(&mut self.bag);
+        self.players.push(player);
     }
 }
 

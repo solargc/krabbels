@@ -1,3 +1,5 @@
+use crate::game::bag::Tile;
+
 use super::player::Rack;
 
 pub const BOARD_SIZE: usize = 15;
@@ -11,6 +13,10 @@ pub struct Position {
 pub enum Direction {
     Across,
     Down,
+}
+
+pub struct Word {
+    pub tiles: Vec<Tile>,
 }
 
 #[derive(Copy, Clone)]
@@ -140,6 +146,7 @@ impl Board {
     pub fn try_place_tiles(
         &mut self,
         rack: &mut Rack,
+        word: &Word,
         pos: &Position,
         dir: &Direction,
         n: usize,

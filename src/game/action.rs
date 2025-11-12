@@ -3,7 +3,8 @@ use super::board;
 pub enum Action {
     PlaceWord {
         start_pos: board::Position,
-        dir: board::Direction,
+        direction: board::Direction,
+        word: board::Word,
     },
     ShuffleRack,
     EndTurn,

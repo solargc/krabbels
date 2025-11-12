@@ -18,6 +18,7 @@ impl Player {
     }
 }
 
+#[derive(Clone)]
 pub struct Rack {
     pub tiles: Vec<Tile>,
 }

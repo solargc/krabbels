@@ -30,6 +30,7 @@ pub const DISTRIBUTION: [(char, u8, u8); 27] = [
     ('Z', 1, 10),
 ];
 
+#[derive(Copy, Clone)]
 pub struct Tile {
     pub letter: char,
     pub value: u8,
