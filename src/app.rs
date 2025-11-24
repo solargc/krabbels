@@ -1,21 +1,43 @@
-use std::io;
+use std::io::{self, Write};
 
-use crate::game::action::Action::PlaceWord;
-use crate::game::board::{Direction, Position, Word};
-use crate::game::player::Rack;
+use crate::error::PlacementError;
 use crate::game::Game;
+use crate::game::action::Action::PlaceWord;
+use crate::game::board::{Board, Direction, Position, Word};
+use crate::game::player::Rack;
 
-fn read_word(rack: &Rack) -> Option<Word> {
-    println!("Votre coup:");
-
+fn read_input(prompt: &str) -> String {
+    print!("{}", prompt);
+    io::stdout().flush().unwrap();
     let mut input = String::new();
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
-    let input = input.trim().to_uppercase();
+    input.trim().to_string()
+}
 
+fn read_word(
+    board: &Board,
+    rack: &Rack,
+    pos: &Position,
+    dir: &Direction,
+) -> Result<Word, PlacementError> {
+    let input = read_input("Votre coup: ").to_uppercase();
     if input.is_empty() || !input.chars().all(|ch| ch.is_alphabetic()) {
-        return None;
+        return Err(PlacementError::InvalidInput);
+    }
+
+    let word_len = input.len();
+    for i in 0..word_len {
+        let (row, col) = Board::step_towards_dir(pos, dir, i);
+
+        if !board.in_bounds(row, col) {
+            return Err(PlacementError::OutOfBounds { row, col });
+        }
+
+        if board.cells[row][col].letter.is_some() {
+            return Err(PlacementError::CellOccupied { row, col });
+        }
     }
 
     let mut word_tiles = Vec::new();
@@ -25,21 +47,15 @@ fn read_word(rack: &Rack) -> Option<Word> {
         if let Some(idx) = available_tiles.iter().position(|tile| tile.letter == ch) {
             word_tiles.push(available_tiles.remove(idx));
         } else {
-            return None;
+            return Err(PlacementError::MissingLetter { letter: ch });
         }
     }
 
-    Some(Word { tiles: word_tiles })
+    Ok(Word { tiles: word_tiles })
 }
 
 fn read_position() -> Option<Position> {
-    println!("Position où commence le mot? (ex: h8)");
-
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read line");
-    let input = input.trim().to_lowercase();
+    let input = read_input("Position où commence le mot (ex: h8) : ").to_lowercase();
 
     if input.len() < 2 {
         return None;
@@ -67,13 +83,8 @@ fn read_position() -> Option<Position> {
 }
 
 fn read_direction() -> Option<Direction> {
-    println!("Direction? h/v");
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input");
-    let direction_string = input.trim().to_lowercase();
-    let direction = match direction_string.as_str() {
+    let input = read_input("Direction (h/v) : ").to_lowercase();
+    let direction = match input.as_str() {
         "h" => Direction::Across,
         "v" => Direction::Down,
         _ => {
@@ -92,45 +103,59 @@ pub fn run() {
     println!("{}", game.board);
     println!("{}", game.players[0].rack);
 
-    let input_direction = loop {
-        if let Some(direction) = read_direction() {
-            break direction;
-        }
-    };
+    loop {
+        let input_position = loop {
+            if let Some(position) = read_position() {
+                break position;
+            }
+            println!("Position invalide, réessayez.")
+        };
 
-    let input_position = loop {
-        if let Some(position) = read_position() {
-            break position;
-        }
-    };
+        let input_direction = loop {
+            if let Some(direction) = read_direction() {
+                break direction;
+            }
+            println!("Direction invalide, réessayez.")
+        };
 
-    let input_word = loop {
-        if let Some(word) = read_word(&game.players[0].rack) {
-            break word;
-        }
-    };
+        let input_word = loop {
+            if let Ok(word) = read_word(
+                &game.board,
+                &game.players[0].rack,
+                &input_position,
+                &input_direction,
+            ) {
+                break word;
+            }
+            println!("Coup invalide, réessayez.")
+        };
 
-    let action = PlaceWord {
-        start_pos: input_position,
-        direction: input_direction,
-        word: input_word,
-    };
+        let action = PlaceWord {
+            start_pos: input_position,
+            direction: input_direction,
+            word: input_word,
+        };
 
-    match game.apply(action) {
-        Ok(events) => {
-            println!("-> Coup accepté !");
-            for e in events {
-                println!("Event: {:?}", e);
+        match game.apply(action) {
+            Ok(events) => {
+                println!("-> Coup accepté !");
+                for e in events {
+                    println!("Event: {:?}", e);
+                }
+            }
+            Err(_e) => {
+                eprintln!("-> Coup impossible.");
             }
         }
-        Err(_e) => {
-            eprintln!("-> Coup impossible.");
-        }
-    }
 
-    println!("");
-    println!("{}", game.board);
-    println!("{}", game.players[0].rack);
+        println!("");
+        println!("{}", game.board);
+        println!("{}", game.players[0].rack);
+
+        println!("{} pioche !", game.players[0].name);
+        game.players[0].rack.top_up(&mut game.bag);
+        println!("{}", game.players[0].rack);
+    }
 
     // let snapshot = game.view();
     // draw_board(&snapshot.board);

@@ -49,6 +49,7 @@ pub fn load_game_state() -> io::Result<()> {
     fs::create_dir_all(&save_dir)?;
 
     let player = load_data(&save_path)?;
+
     println!("Current player: {}", player.name);
 
     Ok(())

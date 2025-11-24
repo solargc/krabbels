@@ -32,15 +32,9 @@ impl Rack {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.tiles.len()
-    }
-
-    pub fn top_up_from(&mut self, bag: &mut Bag) -> usize {
+    pub fn top_up(&mut self, bag: &mut Bag) {
         let need = Self::CAPACITY.saturating_sub(self.tiles.len());
         let drawn = bag.draw_n(need);
-        let added = drawn.len();
         self.tiles.extend(drawn);
-        added
     }
 }

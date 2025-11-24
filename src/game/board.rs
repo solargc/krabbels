@@ -1,4 +1,4 @@
-use crate::game::bag::Tile;
+use crate::{error::PlacementError, game::bag::Tile};
 
 use super::player::Rack;
 
@@ -136,44 +136,26 @@ impl Board {
         row < BOARD_SIZE && col < BOARD_SIZE
     }
 
-    fn step_towards_dir(pos: &Position, dir: &Direction, i: usize) -> (usize, usize) {
+    pub fn step_towards_dir(pos: &Position, dir: &Direction, i: usize) -> (usize, usize) {
         match dir {
             Direction::Across => (pos.row, pos.col + i),
             Direction::Down => (pos.row + i, pos.col),
         }
     }
 
-    pub fn try_place_tiles(
-        &mut self,
-        rack: &mut Rack,
-        word: &Word,
-        pos: &Position,
-        dir: &Direction,
-        n: usize,
-    ) -> usize {
-        let limit = n.min(rack.len());
-        let mut tiles_placed = 0usize;
+    pub fn place_tiles(&mut self, rack: &mut Rack, word: &Word, pos: &Position, dir: &Direction) {
+        let word_len = word.tiles.len();
 
-        for i in 0..limit {
+        for i in 0..word_len {
             let (row, col) = Self::step_towards_dir(pos, dir, i);
-            if !self.in_bounds(row, col) {
-                break;
-            }
-            if self.cells[row][col].letter.is_some() {
-                break;
-            }
-            tiles_placed += 1;
-        }
-
-        if tiles_placed == 0 {
-            return 0;
-        }
-
-        for (i, tile) in rack.tiles.drain(0..tiles_placed).enumerate() {
-            let (row, col) = Self::step_towards_dir(pos, dir, i);
+            let letter = word.tiles[i].letter;
+            let rack_idx = rack
+                .tiles
+                .iter()
+                .position(|tile| tile.letter == letter)
+                .unwrap();
+            let tile = rack.tiles.remove(rack_idx);
             self.cells[row][col].letter = Some(tile.letter);
         }
-
-        tiles_placed
     }
 }

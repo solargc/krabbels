@@ -74,17 +74,8 @@ impl Game {
                 direction,
                 word,
             } => {
-                let count = self.board.try_place_tiles(
-                    &mut self.players[0].rack,
-                    &word,
-                    &start_pos,
-                    &direction,
-                    7,
-                );
-
-                if count == 0 {
-                    return Err(MoveError::OutOfBounds);
-                }
+                self.board
+                    .place_tiles(&mut self.players[0].rack, &word, &start_pos, &direction);
 
                 //events.push(GameEvent::WordPlaced { count });
             }
@@ -97,7 +88,7 @@ impl Game {
     pub fn add_player(&mut self, name: String) {
         let id = self.players.len() + 1;
         let mut player = Player::new(id, name);
-        player.rack.top_up_from(&mut self.bag);
+        player.rack.top_up(&mut self.bag);
         self.players.push(player);
     }
 }
