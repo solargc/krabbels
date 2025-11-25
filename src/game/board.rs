@@ -1,4 +1,4 @@
-use crate::{error::PlacementError, game::bag::Tile};
+use crate::{error::MoveError, game::bag::Tile};
 
 use super::player::Rack;
 
@@ -143,7 +143,55 @@ impl Board {
         }
     }
 
-    pub fn place_tiles(&mut self, rack: &mut Rack, word: &Word, pos: &Position, dir: &Direction) {
+    pub fn validate_bounds(
+        &self,
+        pos: &Position,
+        dir: &Direction,
+        word: &Word,
+    ) -> Result<(), MoveError> {
+        for i in 0..word.tiles.len() {
+            let (row, col) = Self::step_towards_dir(pos, dir, i);
+
+            if !self.in_bounds(row, col) {
+                return Err(MoveError::OutOfBounds { row, col });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate_cells_available(
+        &self,
+        pos: &Position,
+        dir: &Direction,
+        word: &Word,
+    ) -> Result<(), MoveError> {
+        for i in 0..word.tiles.len() {
+            let (row, col) = Self::step_towards_dir(pos, dir, i);
+
+            if self.cells[row][col].letter.is_some() {
+                return Err(MoveError::CellOccupied { row, col });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate_player_has_tiles(&self, rack: &Rack, word: &Word) -> Result<(), MoveError> {
+        let mut available_tiles = rack.tiles.clone();
+
+        for tile in &word.tiles {
+            if let Some(idx) = available_tiles.iter().position(|t| t.letter == tile.letter) {
+                available_tiles.remove(idx);
+            } else {
+                return Err(MoveError::MissingLetter {
+                    letter: tile.letter,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn place_word(&mut self, rack: &mut Rack, pos: &Position, dir: &Direction, word: &Word) {
         let word_len = word.tiles.len();
 
         for i in 0..word_len {

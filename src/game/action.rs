@@ -2,8 +2,8 @@ use super::board;
 
 pub enum Action {
     PlaceWord {
-        start_pos: board::Position,
-        direction: board::Direction,
+        pos: board::Position,
+        dir: board::Direction,
         word: board::Word,
     },
     ShuffleRack,

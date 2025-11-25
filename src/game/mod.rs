@@ -7,6 +7,7 @@ use self::action::Action;
 use self::bag::Bag;
 use self::board::Board;
 use self::player::Player;
+use crate::error::MoveError;
 
 enum Move {
     PlaceWord,
@@ -45,15 +46,6 @@ pub struct Game {
     // pub game_over: bool,
 }
 
-#[derive(Debug)]
-pub enum MoveError {
-    OutOfBounds,
-    MustCoverCenter,
-    ConflictingLetters,
-    Disconnected,
-    MissingTiles,
-}
-
 impl Game {
     pub fn new() -> Self {
         let mut bag = Bag::new();
@@ -69,13 +61,13 @@ impl Game {
         let mut events = Vec::new();
 
         match action {
-            Action::PlaceWord {
-                start_pos,
-                direction,
-                word,
-            } => {
+            Action::PlaceWord { pos, dir, word } => {
+                self.board.validate_bounds(&pos, &dir, &word)?;
+                self.board.validate_cells_available(&pos, &dir, &word)?;
                 self.board
-                    .place_tiles(&mut self.players[0].rack, &word, &start_pos, &direction);
+                    .validate_player_has_tiles(&self.players[0].rack, &word)?;
+                self.board
+                    .place_word(&mut self.players[0].rack, &pos, &dir, &word);
 
                 //events.push(GameEvent::WordPlaced { count });
             }

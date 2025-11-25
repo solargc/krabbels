@@ -1,19 +1,24 @@
 use std::io::{self, Write};
 
-use crate::error::PlacementError;
+use crate::error::{InputError, MoveError};
 use crate::game::Game;
 use crate::game::action::Action::PlaceWord;
+use crate::game::bag::Tile;
 use crate::game::board::{Board, Direction, Position, Word};
 use crate::game::player::Rack;
 
-fn read_input(prompt: &str) -> String {
+fn read_input(prompt: &str) -> Result<String, InputError> {
     print!("{}", prompt);
     io::stdout().flush().unwrap();
     let mut input = String::new();
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
-    input.trim().to_string()
+    let trimmed = input.trim().to_string();
+    if trimmed.is_empty() {
+        return Err(InputError::EmptyInput);
+    }
+    Ok(trimmed)
 }
 
 fn read_word(
@@ -21,44 +26,29 @@ fn read_word(
     rack: &Rack,
     pos: &Position,
     dir: &Direction,
-) -> Result<Word, PlacementError> {
-    let input = read_input("Votre coup: ").to_uppercase();
+) -> Result<Word, InputError> {
+    let input = read_input("Votre coup: ")?.to_uppercase();
     if input.is_empty() || !input.chars().all(|ch| ch.is_alphabetic()) {
-        return Err(PlacementError::InvalidInput);
+        return Err(InputError::InvalidFormat);
     }
 
-    let word_len = input.len();
-    for i in 0..word_len {
-        let (row, col) = Board::step_towards_dir(pos, dir, i);
+    let tiles: Vec<Tile> = input
+        .chars()
+        .map(|ch| Tile {
+            letter: ch,
+            value: 0,
+            is_blank: false,
+        })
+        .collect();
 
-        if !board.in_bounds(row, col) {
-            return Err(PlacementError::OutOfBounds { row, col });
-        }
-
-        if board.cells[row][col].letter.is_some() {
-            return Err(PlacementError::CellOccupied { row, col });
-        }
-    }
-
-    let mut word_tiles = Vec::new();
-    let mut available_tiles = rack.tiles.clone();
-
-    for ch in input.chars() {
-        if let Some(idx) = available_tiles.iter().position(|tile| tile.letter == ch) {
-            word_tiles.push(available_tiles.remove(idx));
-        } else {
-            return Err(PlacementError::MissingLetter { letter: ch });
-        }
-    }
-
-    Ok(Word { tiles: word_tiles })
+    Ok(Word { tiles })
 }
 
-fn read_position() -> Option<Position> {
-    let input = read_input("Position où commence le mot (ex: h8) : ").to_lowercase();
+fn read_position() -> Result<Position, InputError> {
+    let input = read_input("Position où commence le mot (ex: h8) : ")?.to_lowercase();
 
     if input.len() < 2 {
-        return None;
+        return Err(InputError::InvalidPosition);
     }
 
     let (col_char, row_part) = input.split_at(1);
@@ -67,7 +57,7 @@ fn read_position() -> Option<Position> {
     let ascii_code = col_char as u8;
 
     if !(b'a'..=b'o').contains(&ascii_code) {
-        return None;
+        return Err(InputError::InvalidPosition);
     }
 
     let col = (ascii_code - b'a') as usize;
@@ -75,23 +65,23 @@ fn read_position() -> Option<Position> {
     let row = match row_part.parse::<usize>() {
         Ok(n) if (1..=15).contains(&n) => n - 1,
         _ => {
-            return None;
+            return Err(InputError::InvalidPosition);
         }
     };
 
-    Some(Position { row, col })
+    Ok(Position { row, col })
 }
 
-fn read_direction() -> Option<Direction> {
-    let input = read_input("Direction (h/v) : ").to_lowercase();
+fn read_direction() -> Result<Direction, InputError> {
+    let input = read_input("Direction (h/v) : ")?.to_lowercase();
     let direction = match input.as_str() {
         "h" => Direction::Across,
         "v" => Direction::Down,
         _ => {
-            return None;
+            return Err(InputError::InvalidDirection);
         }
     };
-    Some(direction)
+    Ok(direction)
 }
 
 pub fn run() {
@@ -104,37 +94,35 @@ pub fn run() {
     println!("{}", game.players[0].rack);
 
     loop {
-        let input_position = loop {
-            if let Some(position) = read_position() {
-                break position;
+        let (pos, dir, word) = loop {
+            let pos = loop {
+                match read_position() {
+                    Ok(pos) => break pos,
+                    Err(e) => {
+                        println!("Erreur: {}. Réssayez.", e)
+                    }
+                }
+            };
+
+            let dir = loop {
+                match read_direction() {
+                    Ok(dir) => break dir,
+                    Err(e) => {
+                        println!("Erreur: {}. Réssayez.", e)
+                    }
+                }
+            };
+
+            match read_word(&game.board, &game.players[0].rack, &pos, &dir) {
+                Ok(word) => break (pos, dir, word),
+                Err(e) => {
+                    println!("Erreur: {}. Réessayez.", e);
+                    continue;
+                }
             }
-            println!("Position invalide, réessayez.")
         };
 
-        let input_direction = loop {
-            if let Some(direction) = read_direction() {
-                break direction;
-            }
-            println!("Direction invalide, réessayez.")
-        };
-
-        let input_word = loop {
-            if let Ok(word) = read_word(
-                &game.board,
-                &game.players[0].rack,
-                &input_position,
-                &input_direction,
-            ) {
-                break word;
-            }
-            println!("Coup invalide, réessayez.")
-        };
-
-        let action = PlaceWord {
-            start_pos: input_position,
-            direction: input_direction,
-            word: input_word,
-        };
+        let action = PlaceWord { pos, dir, word };
 
         match game.apply(action) {
             Ok(events) => {
@@ -143,8 +131,9 @@ pub fn run() {
                     println!("Event: {:?}", e);
                 }
             }
-            Err(_e) => {
-                eprintln!("-> Coup impossible.");
+            Err(e) => {
+                eprintln!("-> Coup impossible: {}. Recommencez.", e);
+                continue;
             }
         }
 
