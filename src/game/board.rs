@@ -132,18 +132,25 @@ impl Board {
         Self { cells }
     }
 
-    pub fn in_bounds(&self, row: usize, col: usize) -> bool {
+    fn is_empty(&self) -> bool {
+        self.cells
+            .iter()
+            .flatten()
+            .all(|cell| cell.letter.is_none())
+    }
+
+    fn in_bounds(&self, row: usize, col: usize) -> bool {
         row < BOARD_SIZE && col < BOARD_SIZE
     }
 
-    pub fn step_towards_dir(pos: &Position, dir: &Direction, i: usize) -> (usize, usize) {
+    fn step_towards_dir(pos: &Position, dir: &Direction, i: usize) -> (usize, usize) {
         match dir {
             Direction::Across => (pos.row, pos.col + i),
             Direction::Down => (pos.row + i, pos.col),
         }
     }
 
-    pub fn validate_bounds(
+    pub fn validate_in_bounds(
         &self,
         pos: &Position,
         dir: &Direction,
@@ -191,19 +198,76 @@ impl Board {
         Ok(())
     }
 
-    pub fn place_word(&mut self, rack: &mut Rack, pos: &Position, dir: &Direction, word: &Word) {
-        let word_len = word.tiles.len();
+    pub fn validate_adjacent_tiles(
+        &self,
+        pos: &Position,
+        dir: &Direction,
+        word: &Word,
+    ) -> Result<(), MoveError> {
+        if self.is_empty() {
+            for i in 0..word.tiles.len() {
+                let (row, col) = Self::step_towards_dir(pos, dir, i);
+                if row == 7 && col == 7 {
+                    return Ok(());
+                }
+            }
+            return Err(MoveError::MustCoverCenter);
+        }
 
-        for i in 0..word_len {
+        for i in 0..word.tiles.len() {
             let (row, col) = Self::step_towards_dir(pos, dir, i);
+
+            if self.cells[row][col].letter.is_some() {
+                return Ok(());
+            }
+
+            if row > 0 && self.cells[row - 1][col].letter.is_some() {
+                return Ok(());
+            }
+
+            if row < BOARD_SIZE - 1 && self.cells[row + 1][col].letter.is_some() {
+                return Ok(());
+            }
+
+            if col > 0 && self.cells[row][col - 1].letter.is_some() {
+                return Ok(());
+            }
+
+            if col < BOARD_SIZE - 1 && self.cells[row][col + 1].letter.is_some() {
+                return Ok(());
+            }
+        }
+        Err(MoveError::NoConnection)
+    }
+
+    pub fn place_word(
+        &mut self,
+        rack: &mut Rack,
+        pos: &Position,
+        dir: &Direction,
+        word: &Word,
+    ) -> Result<(), MoveError> {
+        for i in 0..word.tiles.len() {
+            let (mut row, mut col) = Self::step_towards_dir(pos, dir, i);
+            while self.cells[row][col].letter.is_some() {
+                match dir {
+                    Direction::Across => col += 1,
+                    Direction::Down => row += 1,
+                };
+                if !self.in_bounds(row, col) {
+                    return Err(MoveError::OutOfBounds { row, col });
+                }
+            }
+
             let letter = word.tiles[i].letter;
-            let rack_idx = rack
+            let index = rack
                 .tiles
                 .iter()
                 .position(|tile| tile.letter == letter)
                 .unwrap();
-            let tile = rack.tiles.remove(rack_idx);
+            let tile = rack.tiles.remove(index);
             self.cells[row][col].letter = Some(tile.letter);
         }
+        Ok(())
     }
 }

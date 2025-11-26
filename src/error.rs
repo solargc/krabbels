@@ -32,6 +32,7 @@ pub enum MoveError {
     MissingLetter { letter: char },
     WordTooShort,
     NoConnection,
+    MustCoverCenter,
     InvalidWord,
 }
 
@@ -54,6 +55,9 @@ impl std::fmt::Display for MoveError {
             }
             MoveError::NoConnection => {
                 write!(f, "Le mot doit être connecté aux mots existants")
+            }
+            MoveError::MustCoverCenter => {
+                write!(f, "Le premier mot doit être placé sur h8")
             }
             MoveError::InvalidWord => {
                 write!(f, "Mot invalide (pas dans le dictionnaire)")

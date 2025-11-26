@@ -124,7 +124,7 @@ pub fn run() {
 
         let action = PlaceWord { pos, dir, word };
 
-        match game.apply(action) {
+        match game.apply_move(action) {
             Ok(events) => {
                 println!("-> Coup accepté !");
                 for e in events {

@@ -6,6 +6,8 @@ pub enum Action {
         dir: board::Direction,
         word: board::Word,
     },
-    ShuffleRack,
-    EndTurn,
+    ExchangeTiles,
+    Pass,
+    Challenge,
+    Resign,
 }

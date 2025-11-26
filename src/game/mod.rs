@@ -9,14 +9,6 @@ use self::board::Board;
 use self::player::Player;
 use crate::error::MoveError;
 
-enum Move {
-    PlaceWord,
-    ExchangeTiles,
-    Pass,
-    Challenge,
-    Resign,
-}
-
 #[derive(Debug)]
 pub enum GameEvent {
     TilePlaced {
@@ -57,17 +49,18 @@ impl Game {
         }
     }
 
-    pub fn apply(&mut self, action: Action) -> Result<Vec<GameEvent>, MoveError> {
+    pub fn apply_move(&mut self, action: Action) -> Result<Vec<GameEvent>, MoveError> {
         let mut events = Vec::new();
 
         match action {
             Action::PlaceWord { pos, dir, word } => {
-                self.board.validate_bounds(&pos, &dir, &word)?;
-                self.board.validate_cells_available(&pos, &dir, &word)?;
+                self.board.validate_in_bounds(&pos, &dir, &word)?;
+                // self.board.validate_cells_available(&pos, &dir, &word)?;
+                self.board.validate_adjacent_tiles(&pos, &dir, &word)?;
                 self.board
                     .validate_player_has_tiles(&self.players[0].rack, &word)?;
                 self.board
-                    .place_word(&mut self.players[0].rack, &pos, &dir, &word);
+                    .place_word(&mut self.players[0].rack, &pos, &dir, &word)?;
 
                 //events.push(GameEvent::WordPlaced { count });
             }
