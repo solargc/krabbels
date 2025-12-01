@@ -30,6 +30,7 @@ pub enum MoveError {
     OutOfBounds { row: usize, col: usize },
     CellOccupied { row: usize, col: usize },
     MissingLetter { letter: char },
+    LetterMismatch { row: usize, col: usize },
     WordTooShort,
     NoConnection,
     MustCoverCenter,
@@ -49,6 +50,10 @@ impl std::fmt::Display for MoveError {
             }
             MoveError::MissingLetter { letter } => {
                 write!(f, "Vous n'avez pas la lettre '{}'", letter)
+            }
+            MoveError::LetterMismatch { row, col } => {
+                let col_letter = (b'a' + *col as u8) as char;
+                write!(f, "Votre mot ne s'insère pas à {}{}", col_letter, row + 1)
             }
             MoveError::WordTooShort => {
                 write!(f, "Le mot doit contenir au moins 2 lettres")

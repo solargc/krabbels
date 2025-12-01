@@ -166,22 +166,6 @@ impl Board {
         Ok(())
     }
 
-    pub fn validate_cells_available(
-        &self,
-        pos: &Position,
-        dir: &Direction,
-        word: &Word,
-    ) -> Result<(), MoveError> {
-        for i in 0..word.tiles.len() {
-            let (row, col) = Self::step_towards_dir(pos, dir, i);
-
-            if self.cells[row][col].letter.is_some() {
-                return Err(MoveError::CellOccupied { row, col });
-            }
-        }
-        Ok(())
-    }
-
     pub fn validate_player_has_tiles(&self, rack: &Rack, word: &Word) -> Result<(), MoveError> {
         let mut available_tiles = rack.tiles.clone();
 
@@ -240,6 +224,25 @@ impl Board {
         Err(MoveError::NoConnection)
     }
 
+    fn is_cell_available(
+        &self,
+        word: &Word,
+        target_letter: char,
+        i: usize,
+        row: usize,
+        col: usize,
+    ) -> Result<bool, MoveError> {
+        match self.cells[row][col].letter {
+            Some(existing_letter) => {
+                if existing_letter != target_letter {
+                    return Err(MoveError::LetterMismatch { row, col });
+                }
+                Ok(true)
+            }
+            None => Ok(false),
+        }
+    }
+
     pub fn place_word(
         &mut self,
         rack: &mut Rack,
@@ -248,23 +251,21 @@ impl Board {
         word: &Word,
     ) -> Result<(), MoveError> {
         for i in 0..word.tiles.len() {
-            let (mut row, mut col) = Self::step_towards_dir(pos, dir, i);
-            while self.cells[row][col].letter.is_some() {
-                match dir {
-                    Direction::Across => col += 1,
-                    Direction::Down => row += 1,
-                };
-                if !self.in_bounds(row, col) {
-                    return Err(MoveError::OutOfBounds { row, col });
-                }
+            let target_letter = word.tiles[i].letter;
+
+            let (row, col) = Self::step_towards_dir(pos, dir, i);
+
+            if self.is_cell_available(word, target_letter, i, row, col)? {
+                continue;
             }
 
-            let letter = word.tiles[i].letter;
             let index = rack
                 .tiles
                 .iter()
-                .position(|tile| tile.letter == letter)
-                .unwrap();
+                .position(|tile| tile.letter == target_letter)
+                .ok_or(MoveError::MissingLetter {
+                    letter: target_letter,
+                })?;
             let tile = rack.tiles.remove(index);
             self.cells[row][col].letter = Some(tile.letter);
         }

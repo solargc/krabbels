@@ -55,10 +55,9 @@ impl Game {
         match action {
             Action::PlaceWord { pos, dir, word } => {
                 self.board.validate_in_bounds(&pos, &dir, &word)?;
-                // self.board.validate_cells_available(&pos, &dir, &word)?;
                 self.board.validate_adjacent_tiles(&pos, &dir, &word)?;
-                self.board
-                    .validate_player_has_tiles(&self.players[0].rack, &word)?;
+                // self.board
+                //     .validate_player_has_tiles(&self.players[0].rack, &word)?;
                 self.board
                     .place_word(&mut self.players[0].rack, &pos, &dir, &word)?;
 
