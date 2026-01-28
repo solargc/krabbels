@@ -1,8 +1,8 @@
 mod app;
-mod display;
 mod error;
 mod game;
 mod save;
+mod ui;
 
 use std::io;
 

@@ -1,11 +1,30 @@
 use crate::game::bag::Bag;
-use crate::game::board::{Board, CellKind, BOARD_SIZE};
+use crate::game::board::{BOARD_SIZE, Board, CellKind};
 use crate::game::player::Rack;
 use colored::*;
 use std::collections::BTreeMap;
 use std::fmt;
 
 const CELL_W: usize = 4;
+
+use crate::game::Game;
+
+pub fn show_game(game: &Game) {
+    println!();
+    println!("{}", game.board);
+    println!("{}", game.players[0].rack);
+}
+
+pub fn show_events(events: &[impl std::fmt::Debug]) {
+    println!("-> Coup accepté !");
+    for e in events {
+        println!("Event: {:?}", e);
+    }
+}
+
+pub fn show_move_error(err: &dyn std::fmt::Display) {
+    eprintln!("-> Coup impossible: {}. Recommencez.", err);
+}
 
 fn center(text: &str, width: usize) -> String {
     let visual_len = strip_ansi_len(text);
